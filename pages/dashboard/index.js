@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { getToken, getUser, clearAuth } from '../utils/auth';
-import { api } from '../utils/api';
+import { getToken, getUser, clearAuth } from '../../utils/auth';
+import { api } from '../../utils/api';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
