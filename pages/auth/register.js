@@ -34,6 +34,7 @@ export default function Register() {
             <label>Email</label><br />
             <input
               type="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -44,6 +45,7 @@ export default function Register() {
             <label>Mot de passe</label><br />
             <input
               type="password"
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
