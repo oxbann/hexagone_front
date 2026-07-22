@@ -13,10 +13,11 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     env:
-      FTP_SERVER: ${{ secrets.OVH_FTP_SERVER }}
-      FTP_USERNAME: ${{ secrets.OVH_FTP_USERNAME }}
-      FTP_PASSWORD: ${{ secrets.OVH_FTP_PASSWORD }}
-      FTP_DIR: ${{ secrets.OVH_FTP_DIR || './www/' }}
+      SSH_HOST: ${{ secrets.OVH_SSH_HOST }}
+      SSH_USER: ${{ secrets.OVH_SSH_USER }}
+      SSH_PRIVATE_KEY: ${{ secrets.OVH_SSH_PRIVATE_KEY }}
+      SSH_PORT: ${{ secrets.OVH_SSH_PORT || '22' }}
+      SSH_DIR: ${{ secrets.OVH_SSH_DIR || 'www' }}
 
     steps:
       - name: Checkout repository
@@ -33,16 +34,21 @@ jobs:
       - name: Build static site
         run: npm run build
 
-      - name: Deploy to OVH
-        if: ${{ env.FTP_SERVER != '' && env.FTP_USERNAME != '' && env.FTP_PASSWORD != '' }}
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ env.FTP_SERVER }}
-          username: ${{ env.FTP_USERNAME }}
-          password: ${{ env.FTP_PASSWORD }}
-          local-dir: ./out/
-          server-dir: ${{ env.FTP_DIR }}
+      - name: Configure SSH key
+        if: ${{ env.SSH_HOST != '' && env.SSH_USER != '' && env.SSH_PRIVATE_KEY != '' }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/ovh_deploy_key
+          chmod 600 ~/.ssh/ovh_deploy_key
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy static site over SSH
+        if: ${{ env.SSH_HOST != '' && env.SSH_USER != '' && env.SSH_PRIVATE_KEY != '' }}
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/ovh_deploy_key -p $SSH_PORT" \
+            ./out/ "$SSH_USER@$SSH_HOST:$SSH_DIR/"
 
       - name: Explain skipped deployment
-        if: ${{ env.FTP_SERVER == '' || env.FTP_USERNAME == '' || env.FTP_PASSWORD == '' }}
-        run: echo "OVH FTP secrets missing. Add OVH_FTP_SERVER, OVH_FTP_USERNAME and OVH_FTP_PASSWORD in repository secrets."
+        if: ${{ env.SSH_HOST == '' || env.SSH_USER == '' || env.SSH_PRIVATE_KEY == '' }}
+        run: echo "OVH SSH secrets missing. Add OVH_SSH_HOST, OVH_SSH_USER and OVH_SSH_PRIVATE_KEY in repository secrets."
