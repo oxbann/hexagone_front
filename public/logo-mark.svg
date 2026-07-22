@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="HEXAGONE">
+  <rect width="96" height="96" rx="18" fill="#101318"/>
+  <path d="M48 10 82 28v39L48 86 14 67V28L48 10Z" fill="#06070a" stroke="#4ee7f5" stroke-width="4"/>
+  <path d="M28 60 45 24h10L38 60H28Z" fill="#b8ff5c"/>
+  <path d="M52 36h16L51 72H35l17-36Z" fill="#ff6d4d"/>
+  <path d="M31 67h34" stroke="#f5f7fb" stroke-width="4" stroke-linecap="round"/>
+</svg>
