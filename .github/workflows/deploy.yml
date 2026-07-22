@@ -13,11 +13,11 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     env:
-      SSH_HOST: ${{ secrets.OVH_SSH_HOST }}
-      SSH_USER: ${{ secrets.OVH_SSH_USER }}
-      SSH_PRIVATE_KEY: ${{ secrets.OVH_SSH_PRIVATE_KEY }}
-      SSH_PORT: ${{ secrets.OVH_SSH_PORT || '22' }}
-      SSH_DIR: ${{ secrets.OVH_SSH_DIR || 'www' }}
+      SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      SFTP_PORT: ${{ secrets.OVH_SFTP_PORT || '22' }}
+      SFTP_DIR: ${{ secrets.OVH_SFTP_DIR || 'www' }}
 
     steps:
       - name: Checkout repository
@@ -34,21 +34,24 @@ jobs:
       - name: Build static site
         run: npm run build
 
-      - name: Configure SSH key
-        if: ${{ env.SSH_HOST != '' && env.SSH_USER != '' && env.SSH_PRIVATE_KEY != '' }}
+      - name: Install SFTP client
+        if: ${{ env.SFTP_HOST != '' && env.SFTP_USER != '' && env.SFTP_PASSWORD != '' }}
         run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/ovh_deploy_key
-          chmod 600 ~/.ssh/ovh_deploy_key
-          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+          sudo apt-get update
+          sudo apt-get install -y lftp
 
-      - name: Deploy static site over SSH
-        if: ${{ env.SSH_HOST != '' && env.SSH_USER != '' && env.SSH_PRIVATE_KEY != '' }}
+      - name: Deploy static site over SFTP
+        if: ${{ env.SFTP_HOST != '' && env.SFTP_USER != '' && env.SFTP_PASSWORD != '' }}
         run: |
-          rsync -az --delete \
-            -e "ssh -i ~/.ssh/ovh_deploy_key -p $SSH_PORT" \
-            ./out/ "$SSH_USER@$SSH_HOST:$SSH_DIR/"
+          lftp -u "$SFTP_USER","$SFTP_PASSWORD" -p "$SFTP_PORT" "sftp://$SFTP_HOST" <<EOF
+          set sftp:auto-confirm yes
+          set net:max-retries 2
+          set net:timeout 30
+          mkdir -p "$SFTP_DIR"
+          mirror --reverse --delete --verbose ./out "$SFTP_DIR"
+          bye
+          EOF
 
       - name: Explain skipped deployment
-        if: ${{ env.SSH_HOST == '' || env.SSH_USER == '' || env.SSH_PRIVATE_KEY == '' }}
-        run: echo "OVH SSH secrets missing. Add OVH_SSH_HOST, OVH_SSH_USER and OVH_SSH_PRIVATE_KEY in repository secrets."
+        if: ${{ env.SFTP_HOST == '' || env.SFTP_USER == '' || env.SFTP_PASSWORD == '' }}
+        run: echo "OVH SFTP secrets missing. Add OVH_SFTP_HOST, OVH_SFTP_USER and OVH_SFTP_PASSWORD in repository secrets."
